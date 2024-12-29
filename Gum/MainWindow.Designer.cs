@@ -1,4 +1,7 @@
-﻿namespace Gum
+﻿using System.Drawing;
+using System.Windows.Forms;
+
+namespace Gum
 {
     partial class MainWindow
     {

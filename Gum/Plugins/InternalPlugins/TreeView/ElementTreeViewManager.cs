@@ -23,6 +23,7 @@ using RenderingLibrary.Graphics;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
 using System.Management.Instrumentation;
 using Gum.Logic;
+using System.Drawing;
 
 namespace Gum.Managers
 {
@@ -93,7 +94,7 @@ namespace Gum.Managers
 
         static ElementTreeViewManager mSelf;
         ContextMenuStrip mMenuStrip;
-        
+
 
         MultiSelectTreeView ObjectTreeView;
 
@@ -121,13 +122,13 @@ namespace Gum.Managers
 
         public static ElementTreeViewManager Self
         {
-            get 
+            get
             {
                 if (mSelf == null)
                 {
                     mSelf = new ElementTreeViewManager();
                 }
-                return mSelf; 
+                return mSelf;
             }
         }
 
@@ -164,9 +165,9 @@ namespace Gum.Managers
         public string FilterText
         {
             get => filterText;
-            set 
+            set
             {
-                if(value != filterText)
+                if (value != filterText)
                 {
                     filterText = value;
                     ReactToFilterTextChanged();
@@ -178,10 +179,10 @@ namespace Gum.Managers
 
         private void SelectFirstElement()
         {
-            TreeNode treeNode = 
+            TreeNode treeNode =
                 ObjectTreeView.Nodes.FirstOrDefault() as TreeNode;
 
-            while(treeNode != null)
+            while (treeNode != null)
             {
                 if (treeNode.Tag != null)
                 {
@@ -334,7 +335,7 @@ namespace Gum.Managers
 
                 return GetTreeNodeFor(modifiedRelative, mStandardElementsTreeNode);
             }
-            else if(relative.StartsWith("behaviors/"))
+            else if (relative.StartsWith("behaviors/"))
             {
                 string modifiedRelative = relative.Substring("behaviors/".Length);
 
@@ -389,7 +390,7 @@ namespace Gum.Managers
                 {
                     container = RootStandardElementsTreeNode;
                 }
-                else if(tag is BehaviorSave)
+                else if (tag is BehaviorSave)
                 {
                     container = RootBehaviorsTreeNode;
                 }
@@ -442,13 +443,13 @@ namespace Gum.Managers
 
             var grid = new Grid();
             grid.RowDefinitions.Add(
-                new System.Windows.Controls.RowDefinition() 
+                new System.Windows.Controls.RowDefinition()
                 { Height = new System.Windows.GridLength(22, System.Windows.GridUnitType.Pixel) });
             grid.RowDefinitions.Add(
                 new System.Windows.Controls.RowDefinition()
                 { Height = new System.Windows.GridLength(22, System.Windows.GridUnitType.Pixel) });
             grid.RowDefinitions.Add(
-                new System.Windows.Controls.RowDefinition() 
+                new System.Windows.Controls.RowDefinition()
                 { Height = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
 
             GumCommands.Self.GuiCommands.AddControl(grid, "Project", TabLocation.Left);
@@ -551,7 +552,7 @@ namespace Gum.Managers
                 // Use custom cursors if the check box is checked.
                 // Sets the custom cursor based upon the effect.
                 //InputManager.
-                if(InputLibrary.Cursor.Self.IsInWindow)
+                if (InputLibrary.Cursor.Self.IsInWindow)
                 {
                     e.UseDefaultCursors = false;
                     System.Windows.Forms.Cursor.Current = AddCursor;
@@ -562,6 +563,97 @@ namespace Gum.Managers
                 //else
                 //    Cursor.Current = MyNoDropCursor;
             };
+
+            // TODO: Change the ObjectTreeView.DrawMode = TreeViewDrawMode.OwnerDrawAll;
+            // TODO: And then update the PLUS/MINUS sign size, by manualy drawing the
+            // TODO: Entire treeview
+
+            UpdateTreeviewScale(1.5f);
+            UpdateTreeviewStyle(ApplicationDrawStyle.Dark);
+        }
+
+        public void UpdateTreeviewScale(float scale = 1.0f) 
+        {
+            // TODO: Move the defaults somewhere
+            float baseFontSize = 8.25f;
+            string defaultFont = "Microsoft Sans Serif";
+
+            ObjectTreeView.Font = new System.Drawing.Font(defaultFont, baseFontSize * scale);
+
+            int baseImageSize = 16;
+
+            // We need to first "Revert" the images scale back to the original if it's not
+            if (ObjectTreeView.ImageList.ImageSize.Width != baseImageSize)
+            {
+                ObjectTreeView.ImageList = ResizeImageListImages(
+                    ObjectTreeView.ImageList, new System.Drawing.Size(baseImageSize, baseImageSize));
+            }
+
+            // Then we can re-scale the images
+            ObjectTreeView.ImageList = ResizeImageListImages(
+                ObjectTreeView.ImageList
+                , new System.Drawing.Size(
+                    (int)(baseImageSize * scale)
+                    , (int)(baseImageSize * scale)));
+        }
+
+
+        public ImageList ResizeImageListImages(ImageList originalImageList, Size newSize)
+        {
+            ImageList resizedImageList = new ImageList
+            {
+                ImageSize = newSize,
+                ColorDepth = originalImageList.ColorDepth // Preserve original color depth
+            };
+
+            foreach (string key in originalImageList.Images.Keys)
+            {
+                Image originalImage = originalImageList.Images[key];
+                Image resizedImage = ResizeImageWithoutGraphics(originalImage, newSize); // Reuse ResizeImage method
+                resizedImageList.Images.Add(key, resizedImage);
+            }
+
+            return resizedImageList;
+        }
+
+        private Image ResizeImageWithoutGraphics(Image originalImage, Size newSize)
+        {
+            Bitmap resizedImage = new Bitmap(newSize.Width, newSize.Height);
+
+            for (int x = 0; x < newSize.Width; x++)
+            {
+                for (int y = 0; y < newSize.Height; y++)
+                {
+                    // Calculate the position in the original image
+                    int originalX = x * originalImage.Width / newSize.Width;
+                    int originalY = y * originalImage.Height / newSize.Height;
+
+                    // Copy the pixel from the original image
+                    resizedImage.SetPixel(x, y, ((Bitmap)originalImage).GetPixel(originalX, originalY));
+                }
+            }
+
+            return resizedImage;
+        }
+
+        public enum ApplicationDrawStyle
+        {
+            Light,
+            Dark
+        }
+
+        public void UpdateTreeviewStyle(ApplicationDrawStyle mode)
+        {
+            if (mode == ApplicationDrawStyle.Dark)
+            {
+                ObjectTreeView.BackColor = Color.FromArgb(33, 33, 33);
+                ObjectTreeView.ForeColor = Color.FromArgb(255, 255, 255);
+            }
+            else //if (mode == ApplicationDrawStyle.Light)
+            {
+                ObjectTreeView.BackColor = Color.FromArgb(255, 255, 255);
+                ObjectTreeView.ForeColor = Color.FromArgb(0, 0, 0);
+            }
         }
 
         private void ObjectTreeView_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)

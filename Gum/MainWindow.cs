@@ -16,6 +16,8 @@ using Gum.DataTypes;
 using Gum.Services;
 using Gum.Undo;
 using Gum.Logic;
+using Microsoft.Xna.Framework.Graphics;
+using static Gum.Managers.ElementTreeViewManager;
 
 namespace Gum
 {
@@ -146,6 +148,15 @@ namespace Gum
 
             InitializeFileWatchTimer();
 
+
+            // This adjusts all background behind the tabs/panels
+            // Dark values
+            this.BackColor = Color.FromArgb(33, 33, 33);
+            this.ForeColor = Color.FromArgb(255, 255, 255); // THis is also used for the MENU drop down color
+
+            // Light values
+            //this.BackColor = Color.FromArgb(255, 255, 255);
+            //this.ForeColor = Color.FromArgb(0, 0, 0);
 
         }
 
